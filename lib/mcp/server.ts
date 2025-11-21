@@ -1,34 +1,35 @@
 /**
  * MCPサーバーの設定
- * 
+ *
  * サーバーインスタンスの作成とツール・リソース・プロンプトの登録を行います
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+} from "@modelcontextprotocol/sdk/types";
 import type {
   CallToolRequest,
   ListToolsRequest,
-} from '@modelcontextprotocol/sdk/types.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+} from "@modelcontextprotocol/sdk/types";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   greetHandler,
   greetInputSchema,
   echoHandler,
   echoInputSchema,
   getCurrentTimeHandler,
-} from './tools/example-tool.js';
+} from "./tools/example-tool";
 
 /**
  * MCPサーバーインスタンスの作成
+ * 注意: 毎回新しいインスタンスを作成します（ステートレス）
  */
 export function createMCPServer() {
   const serverInfo = {
-    name: process.env.MCP_SERVER_NAME || 'geo-mcp',
-    version: process.env.MCP_SERVER_VERSION || '1.0.0',
+    name: process.env.MCP_SERVER_NAME || "geo-mcp",
+    version: process.env.MCP_SERVER_VERSION || "1.0.0",
   };
 
   const server = new Server(serverInfo, {
@@ -41,30 +42,32 @@ export function createMCPServer() {
     },
   });
 
-  console.log(`[MCP Server] Creating server: ${serverInfo.name} v${serverInfo.version}`);
+  console.log(
+    `[MCP Server] Creating server: ${serverInfo.name} v${serverInfo.version}`
+  );
 
   // ツール一覧のリクエストハンドラー
   server.setRequestHandler(
     ListToolsRequestSchema,
     async (_request: ListToolsRequest) => {
-      console.log('[MCP Server] Listing tools');
+      console.log("[MCP Server] Listing tools");
       return {
         tools: [
           {
-            name: 'greet',
-            description: '指定された名前で挨拶を返します',
+            name: "greet",
+            description: "指定された名前で挨拶を返します",
             inputSchema: zodToJsonSchema(greetInputSchema),
           },
           {
-            name: 'echo',
-            description: 'メッセージをエコーバックします',
+            name: "echo",
+            description: "メッセージをエコーバックします",
             inputSchema: zodToJsonSchema(echoInputSchema),
           },
           {
-            name: 'get-current-time',
-            description: '現在の日時を日本時間で返します',
+            name: "get-current-time",
+            description: "現在の日時を日本時間で返します",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {},
             },
           },
@@ -82,17 +85,17 @@ export function createMCPServer() {
 
       try {
         switch (name) {
-          case 'greet': {
+          case "greet": {
             const parsed = greetInputSchema.parse(args);
             return await greetHandler(parsed);
           }
 
-          case 'echo': {
+          case "echo": {
             const parsed = echoInputSchema.parse(args);
             return await echoHandler(parsed);
           }
 
-          case 'get-current-time':
+          case "get-current-time":
             return await getCurrentTimeHandler();
 
           default:
@@ -103,8 +106,10 @@ export function createMCPServer() {
         return {
           content: [
             {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              type: "text",
+              text: `Error: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`,
             },
           ],
           isError: true,
@@ -113,20 +118,9 @@ export function createMCPServer() {
     }
   );
 
-  console.log('[MCP Server] Server initialized with tools: greet, echo, get-current-time');
+  console.log(
+    "[MCP Server] Server initialized with tools: greet, echo, get-current-time"
+  );
 
   return server;
-}
-
-/**
- * サーバーインスタンスのシングルトン
- * 注意: Vercelのサーバーレス環境では、各リクエストで新しいインスタンスが作成される可能性があります
- */
-let serverInstance: Server | null = null;
-
-export function getMCPServer(): Server {
-  if (!serverInstance) {
-    serverInstance = createMCPServer();
-  }
-  return serverInstance;
 }
