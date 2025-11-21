@@ -4,15 +4,15 @@
  * サーバーインスタンスの作成とツール・リソース・プロンプトの登録を行います
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types";
+} from "@modelcontextprotocol/sdk/types.js";
 import type {
   CallToolRequest,
   ListToolsRequest,
-} from "@modelcontextprotocol/sdk/types";
+} from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   greetHandler,

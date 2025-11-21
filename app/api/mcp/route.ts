@@ -5,12 +5,21 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createMCPServer } from "@/lib/mcp/server";
 import type {
   JSONRPCRequest,
-  JSONRPCResponse,
-} from "@modelcontextprotocol/sdk/types";
+  JSONRPCMessage,
+} from "@modelcontextprotocol/sdk/types.js";
+
+/**
+ * メッセージがレスポンスかどうかを判定
+ */
+function isJSONRPCResponse(
+  message: JSONRPCMessage
+): message is JSONRPCMessage & { id: string | number } {
+  return "id" in message && message.id !== undefined;
+}
 
 /**
  * POST - MCPリクエストの処理
@@ -47,29 +56,31 @@ export async function POST(request: NextRequest) {
 
     try {
       // クライアント側のトランスポートを使ってリクエストを送信
-      const responsePromise = new Promise<JSONRPCResponse>(
-        (resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error("Request timeout"));
-          }, 30000);
+      const responsePromise = new Promise<JSONRPCMessage>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Request timeout"));
+        }, 30000);
 
-          // レスポンスを受け取るハンドラー
-          clientTransport.onmessage = (message: JSONRPCResponse) => {
-            clearTimeout(timeout);
-            console.log("[API] Response received:", message);
+        // レスポンスを受け取るハンドラー
+        clientTransport.onmessage = (message: JSONRPCMessage) => {
+          clearTimeout(timeout);
+          console.log("[API] Response received:", message);
+
+          // レスポンスのみを処理（通知は無視）
+          if (isJSONRPCResponse(message)) {
             resolve(message);
-          };
+          }
+        };
 
-          clientTransport.onerror = (error: Error) => {
-            clearTimeout(timeout);
-            console.error("[API] Transport error:", error);
-            reject(error);
-          };
+        clientTransport.onerror = (error: Error) => {
+          clearTimeout(timeout);
+          console.error("[API] Transport error:", error);
+          reject(error);
+        };
 
-          // リクエストを送信
-          clientTransport.send(body);
-        }
-      );
+        // リクエストを送信
+        clientTransport.send(body);
+      });
 
       const response = await responsePromise;
 
@@ -97,8 +108,8 @@ export async function POST(request: NextRequest) {
         console.error("[API] Cleanup error:", cleanupError);
       }
 
-      const errorResponse: JSONRPCResponse = {
-        jsonrpc: "2.0",
+      const errorResponse = {
+        jsonrpc: "2.0" as const,
         error: {
           code: error.code || -32603,
           message: error.message || "Internal error",
